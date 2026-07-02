@@ -1,96 +1,89 @@
-# Redrob Hackathon — Submission Metadata Template
-#
-# Copy this file to your repo root as `submission_metadata.yaml` and fill it in.
-# The fields here should match what you submit via the portal at upload time.
-# Stage 3 review uses this file to verify your portal metadata.
+# Redrob Hackathon — Submission Metadata
+# Filled from submission_metadata_template.yaml — mirrors portal submission.
 
 # ============================================================================
 # Team identity
 # ============================================================================
-team_name: "your-team-name-here"  # Used in leaderboard and announcements
+team_name: "Rachit Tayal"                     # Used in leaderboard and announcements
 
 primary_contact:
   name: "Rachit Tayal"
-  email: "primary@example.com"   # Used for all organizer communication
-  phone: "+91-XXXXXXXXXX"        # Used for top-50 / top-10 outreach
+  email: "rachittayal99@gmail.com"                       # Used for all organizer communication
+  phone: "9215530766              # Used for top-50 / top-10 outreach
 
 team_members:
-  - name: "Member 1 Full Name"
-    email: "member1@example.com"
-    role: "ML Engineer"          # Optional, e.g. "Team Lead", "Backend", "Data"
-  - name: "Member 2 Full Name"
-    email: "member2@example.com"
-    role: "Data Engineer"
-  # Add more members as needed; solo participants list just one member
+  - name: "Rachit Tayal
+    email: "9215530766"
+    role: "AI Engineer"
 
 # ============================================================================
 # Code and reproducibility
 # ============================================================================
-github_repo: "https://github.com/YOUR_USERNAME/YOUR_REPO"
-# Required. Must be reachable. Private repos OK if you can grant organizer
-# access at Stage 3 (the email to add will be communicated then).
+github_repo: "https://github.com/Rachittayal/Redrob_Ranker"
+# Must be reachable. Private repos OK if you can grant organizer access at Stage 3.
 
-sandbox_link: "https://huggingface.co/spaces/YOUR_USERNAME/redrob-ranker"
-# Required. A working hosted environment where the ranker can be run on a small
-# candidate sample. See Section 10.5 of submission_spec.md for acceptable
-# platforms (HuggingFace Spaces, Streamlit Cloud, Replit, Colab, Docker, Binder).
+reproduce_command: "uv run precompute.py --candidates ./candidates.jsonl --out ./candidate_features.pkl && uv run rank.py --candidates ./candidates.jsonl --features ./candidate_features.pkl --out ./submission.csv"
+# Two-step command: precompute.py builds offline artifacts (not time-boxed),
+# rank.py performs the timed runtime ranking step (must complete within 5 min).
+# See README.md Section 4 for the full setup + run sequence.
 
-reproduce_command: "python rank.py --candidates ./candidates.jsonl --out ./submission.csv"
-# The single command that produces submission.csv from candidates.jsonl.
-# Should run end-to-end within 5 minutes on CPU with 16GB RAM and no network.
-
-# ============================================================================
-# Compute environment
-# ============================================================================
-compute:
-  platform: "MacBook Pro M2"                    # Or: "AWS EC2 c5.4xlarge", "Local Linux box", etc.
-  cpu_cores: 8                                  # Number of CPU cores used
-  ram_gb: 16                                    # Available RAM in GB
-  python_version: "3.11.4"                      # python --version
-  os: "macOS 14.2"                              # Or "Ubuntu 22.04 LTS", etc.
-  uses_gpu_for_inference: false                 # Must be false — see compute constraints
-  has_network_during_ranking: false             # Must be false — no API calls during ranking
-  pre_computation_required: false               # true if you pre-compute embeddings or train models offline
-  pre_computation_time_minutes: 0               # Approximate, if applicable
 
 # ============================================================================
 # AI tools declaration
 # ============================================================================
-# Transparency only — declared use is NOT penalized. Be honest. Stage 5 interview
-# may verify these declarations against your code; declarations that contradict
-# your code or your interview are flagged.
+# Transparency only — declared use is NOT penalized. Be honest.
 ai_tools_used:
-  - "Claude"        # e.g. for architecture discussion, code review
-  - "GitHub Copilot"  # e.g. for autocomplete
-  # Other options: "ChatGPT", "Cursor", "Gemini", "Codeium", "Other", "None"
+  - "Claude"
+  # Add/remove others actually used: "ChatGPT", "GitHub Copilot", "Cursor", "Gemini", "Other", "None"
 
 ai_usage_summary: |
-  Briefly describe how AI tools were used. Examples:
-  - "Used Claude for code review and architectural discussion. Used Copilot for autocomplete.
-     No candidate data was fed to any LLM."
-  - "Used ChatGPT to debug Python issues and Cursor for refactoring."
-  - "No AI tools used."
+  Used Claude for architecture discussion, design-decision review, and iterative
+  critique of the scoring methodology (feature selection, weight justification,
+  honeypot detection thresholds, README/documentation drafting). No candidate data
+  was sent to any external LLM API. The ranking pipeline itself (precompute.py,
+  scorer.py, honeypot.py, reasoning.py, rank.py) runs entirely offline with no
+  network calls, per the compute constraints — all scoring logic is hand-implemented
+  Python, not LLM-generated output pasted in wholesale.
+  <ADJUST to reflect your actual workflow — e.g. add Copilot/ChatGPT/Cursor if used for autocomplete or debugging.>
 
 # ============================================================================
 # Approach summary (optional but recommended)
 # ============================================================================
 methodology_summary: |
-  ≤200 word summary of your approach. Strongly recommended.
+  Two-phase system: precompute.py builds skill/title frequency and IDF maps offline
+  from the full 100K pool; rank.py loads these artifacts and scores all candidates
+  at runtime (~46s for 100K on CPU, well within the 5-minute budget).
 
-  Example:
-  "Rule-based ranker with explicit reasoning capture. Five scoring components
-  (skills, title+career, experience years, location, education) combined with
-  a multiplicative behavioral-signal modifier. The title component is the
-  decisive signal against keyword-stuffer traps; an endorsement-and-duration
-  trust multiplier on skills catches lazy keyword stuffing. Runtime is ~10
-  seconds for 50K candidates on CPU."
+  The JD is fixed for the competition, so its requirements are hand-encoded into
+  structured config (jd_config.py) rather than parsed automatically — must-have
+  skills, explicit disqualifiers (pure-research-only, pure-consulting-only career,
+  CV/speech-dominant without NLP/IR exposure, stale-coder, title-chasing), and an
+  "ideal candidate" profile, all traceable to specific JD statements.
+
+  Final score is a transparent weighted sum of five components: career evidence
+  (0.35, weighted toward career_history descriptions over job titles, since the
+  dataset deliberately decorrelates the two), skills (0.25, tiered by JD-relevance
+  and corroborated against endorsements/duration and, where available, platform-
+  verified skill_assessment_scores), experience fit (0.15, years + tenure
+  stability), availability (0.15, activity/response-rate/notice-period as a bounded
+  modifier, not a multiplier that can zero out a strong candidate), and trust/
+  completeness (0.10). Hard-set weights rather than a learned ranker, since no
+  labeled relevance data is available during the competition.
+
+  Honeypot detection (honeypot.py) uses two threshold-validated structural checks
+  (impossible skill-duration/proficiency combinations; current-role duration
+  exceeding total stated experience) confirmed via sensitivity sweeps across the
+  full 100K pool. Flagged candidates are excluded outright before scoring.
+
+  Reasoning is templated from actual computed score components and profile fields
+  — never freely generated — to avoid hallucinated claims at Stage 4 review.
 
 # ============================================================================
 # Declarations
 # ============================================================================
 declarations:
-  read_submission_spec: true        # I have read submission_spec.md in full
-  code_is_original_work: true       # My code is my team's original work (using AI as a tool is fine)
-  no_collusion: true                # I have not coordinated my submission with other teams
-  honeypot_check_done: false        # OPTIONAL — set true if you explicitly checked for honeypots in your ranking
-  reproduction_tested: true         # I have tested that my reproduce_command runs end-to-end
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true          # explicit honeypot.py module + threshold validation
+  reproduction_tested: <FILL_IN — true only after you've actually run the two commands end-to-end on a clean checkout>
